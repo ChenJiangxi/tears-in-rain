@@ -27,9 +27,9 @@
       this.active = false;
       this.lines  = [[]];
 
-      this.fontSize    = 192;
-      this.lineHeight  = 190;
-      this.font        = `400 ${this.fontSize}px 'Caveat', 'Ma Shan Zheng', cursive`;
+      this.fontSize    = 76;
+      this.lineHeight  = 132;
+      this.font        = `300 ${this.fontSize}px 'Caveat', 'Ma Shan Zheng', cursive`;
       this.maxLineWidth = 780;
 
       this.cursorBlink = 0;
@@ -186,7 +186,7 @@
           ctx.rotate(rot);
           ctx.scale(scale, scale);
           ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
-          ctx.shadowBlur  = 10;
+          ctx.shadowBlur  = 4;
           ctx.fillText(g.ch, -glyphW / 2, 0);
           ctx.restore();
 
