@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Tears in Rain — write on the glass. Watch it dissolve." />
+  <title>Tears in Rain</title>
+
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link
+    href="https://fonts.loli.net/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,300;0,6..96,400;0,6..96,500;1,6..96,300;1,6..96,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=IBM+Plex+Mono:wght@200;300;400&family=LXGW+WenKai+TC:wght@300;400&family=Caveat:wght@400;500&family=Ma+Shan+Zheng&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="scene" class="scene">
+    <canvas id="shader-canvas" aria-hidden="true"></canvas>
+    <canvas id="fog-canvas" aria-hidden="true"></canvas>
+
+    <div class="letterbox top" aria-hidden="true"></div>
+    <div class="letterbox bottom" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="meta meta-top">
+      <div class="meta-left">
+        <span class="mark-sub" data-i18n="markSub">a window, a confession</span>
+        <span class="mark-main"><em>Tears</em>&nbsp;in&nbsp;Rain</span>
+      </div>
+      <div class="meta-right">
+        <div class="clock" id="clock">00:00</div>
+        <div class="sublabel dim" data-i18n="loc">rain recorded · somewhere in the night</div>
+      </div>
+    </header>
+
+    <footer class="meta meta-bottom">
+      <div class="meta-left">
+        <span class="sublabel dim"><span data-i18n="reel">reel</span>&nbsp;01&nbsp;·&nbsp;<span data-i18n="take">take</span>&nbsp;<span id="takeN">001</span></span>
+      </div>
+      <div class="meta-right">
+        <span class="sublabel dim" data-i18n="escHint">esc — let it dissolve</span>
+      </div>
+    </footer>
+
+    <section class="echo" id="echo" aria-live="polite">
+      <div class="echo-frame">
+        <div class="echo-quote" id="echoQuote"></div>
+        <div class="echo-source" id="echoSource"></div>
+      </div>
+    </section>
+
+    <div class="typing-hint" id="typingHint" aria-hidden="true" data-i18n="typingHint">
+      write on the glass
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="intro">
+        <div class="intro-head" data-i18n="introHead">an intermission, somewhere in the rain</div>
+        <h1 class="intro-title"><em>Tears</em>&nbsp;in&nbsp;Rain</h1>
+        <p class="intro-attr" data-i18n="introAttr">after Roy Batty · Blade Runner, 1982</p>
+        <p class="intro-lede" data-i18n="introLede">A foggy window. A confession written with a fingertip.<br/>The rain that washes it off, and a memory that stays.</p>
+
+        <ol class="intro-how" aria-label="how it works">
+          <li><span class="num">i.</span><span class="beat" data-i18n="howBeat1">write something you can't say aloud</span></li>
+          <li><span class="num">ii.</span><span class="beat" data-i18n="howBeat2">pause — the rain will take it</span></li>
+          <li><span class="num">iii.</span><span class="beat" data-i18n="howBeat3">a line from an old film echoes back</span></li>
+        </ol>
+
+        <button class="intro-btn" id="startBtn" type="button">
+          <span class="intro-btn-word" data-i18n="enter">enter</span>
+          <span class="intro-btn-rule" aria-hidden="true"></span>
+        </button>
+        <div class="intro-foot" data-i18n="introFoot">headphones recommended · esc to dissolve</div>
+      </div>
+    </div>
+
+    <button class="fab" id="fab" aria-label="controls" aria-expanded="false" hidden>
+      <svg class="fab-svg fab-open" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="2.2"/>
+        <circle cx="12" cy="12" r="8.2" opacity=".65"/>
+        <path d="M12 1.5v3.2M12 19.3v3.2M3.5 12h3.2M17.3 12h3.2" opacity=".55"/>
+      </svg>
+      <svg class="fab-svg fab-close" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+
+    <aside class="panel" id="panel" aria-hidden="true">
+      <header class="panel-head">
+        <h2 class="panel-title" data-i18n="panelTitle">Controls</h2>
+        <p class="panel-sub" data-i18n="panelSub">Tune the atmosphere.</p>
+      </header>
+
+      <section class="group">
+        <div class="group-title" data-i18n="atmosphere">Atmosphere</div>
+        <div class="slider-row">
+          <label for="sRain" data-i18n="rain">Rain intensity</label>
+          <input id="sRain" class="slider" type="range" min="0" max="100" value="60" />
+          <span class="val" id="vRain">60</span>
+        </div>
+        <div class="slider-row">
+          <label for="sFog" data-i18n="fog">Glass blur</label>
+          <input id="sFog" class="slider" type="range" min="0" max="100" value="27" />
+          <span class="val" id="vFog">30</span>
+        </div>
+        <div class="slider-row">
+          <label for="sSpeed" data-i18n="speed">Speed</label>
+          <input id="sSpeed" class="slider" type="range" min="20" max="300" value="100" />
+          <span class="val" id="vSpeed">100</span>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="group-title" data-i18n="drops">Drops</div>
+        <div class="slider-row">
+          <label for="sDropSize" data-i18n="dropSize">Size</label>
+          <input id="sDropSize" class="slider" type="range" min="10" max="200" value="121" />
+          <span class="val" id="vDropSize">121</span>
+        </div>
+        <div class="slider-row">
+          <label for="sDropDensity" data-i18n="dropDensity">Density</label>
+          <input id="sDropDensity" class="slider" type="range" min="5" max="100" value="14" />
+          <span class="val" id="vDropDensity">14</span>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="group-title" data-i18n="optics">Optics</div>
+        <div class="slider-row">
+          <label for="sRefract" data-i18n="refract">Refraction</label>
+          <input id="sRefract" class="slider" type="range" min="0" max="100" value="55" />
+          <span class="val" id="vRefract">55</span>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="group-title" data-i18n="backdrop">Backdrop</div>
+        <div class="btn-row">
+          <button class="btn primary" id="uploadBtn" type="button" data-i18n="upload">Upload image or video</button>
+          <button class="btn ghost" id="resetBtn" type="button" data-i18n="reset">Reset</button>
+        </div>
+        <p class="hint" data-i18n="uploadHint">or drag &amp; drop anywhere</p>
+        <input id="fileInput" type="file" accept="image/*,video/*" hidden />
+      </section>
+
+      <section class="group">
+        <div class="group-title" data-i18n="audio">Ambience</div>
+        <label class="toggle">
+          <input type="checkbox" id="audioToggle" checked />
+          <span class="toggle-track" aria-hidden="true"><span class="toggle-dot"></span></span>
+          <span class="toggle-label" data-i18n="audioOn">Rain sound</span>
+        </label>
+        <div class="slider-row compact">
+          <label for="sVol" data-i18n="volume">Volume</label>
+          <input id="sVol" class="slider" type="range" min="0" max="100" value="40" />
+          <span class="val" id="vVol">40</span>
+        </div>
+      </section>
+
+      <footer class="panel-foot">
+        <div class="lang" role="group" aria-label="language">
+          <button class="lang-btn" data-lang="en" type="button">EN</button>
+          <button class="lang-btn" data-lang="zh" type="button">中</button>
+        </div>
+      </footer>
+    </aside>
+
+    <div class="drop-hint" id="dropHint" aria-hidden="true"></div>
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="quotes.js"></script>
+  <script src="audio.js"></script>
+  <script src="shader.js"></script>
+  <script src="fog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
