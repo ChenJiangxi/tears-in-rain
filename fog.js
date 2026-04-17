@@ -186,7 +186,7 @@
           ctx.rotate(rot);
           ctx.scale(scale, scale);
           ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
-          ctx.shadowBlur  = 4;
+          ctx.shadowBlur  = 2;
           ctx.fillText(g.ch, -glyphW / 2, 0);
           ctx.restore();
 
