@@ -36,7 +36,7 @@
 
       this.dissolving    = false;
       this.dissolveT     = 0;
-      this.dissolveDur   = 3.5;
+      this.dissolveDur   = 7.0;
       this.onDissolveDone = null;
 
       this.prevTime = 0;

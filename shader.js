@@ -258,8 +258,10 @@
       float radial     = 1.0 - smoothstep(0.0, 0.75, length(UV - 0.5) * 1.6);
       // Overall fog effect fades only after letters are fully reclaimed
       float hasTextFade = uHasText * (1.0 - smoothstep(0.85, 1.0, uTextDissolve));
+      // Rain drops bead on the glass and physically displace condensation — keeps drops visible through fog
+      float fogUnderDrop = 1.0 - c.x * 0.62;
       // Fog invades cleared areas progressively: (1 - textClear*(1-reclaim))
-      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear * (1.0 - reclaim));
+      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear * (1.0 - reclaim)) * fogUnderDrop;
       vec3 fogTint = mix(vec3(0.50, 0.52, 0.58), vec3(0.90, 0.92, 0.95), uFogBright);
       col = mix(col, fogTint, condensation);
 
