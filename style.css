@@ -42,13 +42,13 @@ html[lang="zh-CN"] body { font-family: 'LXGW WenKai TC', var(--f-body); }
   overflow: hidden;
 }
 
-#shader-canvas, #fog-canvas {
+#shader-canvas {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
   display: block;
+  z-index: 0;
+  background: #05050a;
 }
-#shader-canvas { z-index: 0; background: #05050a; }
-#fog-canvas    { z-index: 1; pointer-events: none; }
 
 /* ---------- cinema chrome ---------- */
 .letterbox {

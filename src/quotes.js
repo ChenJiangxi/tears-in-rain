@@ -4,7 +4,7 @@
    works sharing the themes of memory, impermanence, and rain.
    `block: true` flags long passages (smaller type, longer hold).
    ========================================================= */
-window.QUOTES = [
+export const QUOTES = [
   /* ── Blade Runner ── */
   {
     en: "All those moments will be lost in time, like tears in rain.",

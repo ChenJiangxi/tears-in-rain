@@ -16,7 +16,9 @@
    Public surfaces: start(), setVolume(v). keyTick/
    dissolveSwell/echoChime are used by the typewriter UI.
    ========================================================= */
-(function (global) {
+// RainAudio — procedural rain with drop transients, built-in reverb, and
+// optional sample playback if /rain.mp3 is present.
+
   class RainAudio {
     constructor() {
       this.ctx = null;
@@ -27,7 +29,7 @@
 
     async start() {
       if (this.started) return;
-      const AC = global.AudioContext || global.webkitAudioContext;
+      const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) { console.warn('Web Audio unavailable'); return; }
       this.ctx = new AC();
       if (this.ctx.state === 'suspended') {
@@ -424,5 +426,5 @@
     }
   }
 
-  global.RainAudio = RainAudio;
-})(window);
+  export { RainAudio };
+

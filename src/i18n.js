@@ -1,6 +1,5 @@
-window.I18N = {
+export const I18N = {
   en: {
-    /* intro */
     introHead: 'an intermission, somewhere in the rain',
     introAttr: 'after Roy Batty · Blade Runner, 1982',
     introLede: 'A foggy window. A confession written with a fingertip.<br/>The rain that washes it off, and a memory that stays.',
@@ -10,7 +9,6 @@ window.I18N = {
     enter:     'enter',
     introFoot: 'headphones recommended · esc to dissolve',
 
-    /* scene chrome */
     markSub:   'a window, a confession',
     loc:       'rain recorded · somewhere in the night',
     reel:      'reel',
@@ -18,7 +16,6 @@ window.I18N = {
     escHint:   'esc — let it dissolve',
     typingHint:'write on the glass',
 
-    /* panel */
     panelTitle:'Controls',
     panelSub:  'Tune the atmosphere.',
     atmosphere:'Atmosphere',
@@ -39,7 +36,6 @@ window.I18N = {
     audioOn:   'Rain sound',
     volume:    'Volume',
 
-    /* drop hint */
     dropHintDefault: 'drop an image or video',
     dropHintLoaded:  'welcome back',
   },
