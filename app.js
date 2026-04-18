@@ -19,6 +19,7 @@
     lang: stored || (preferZh ? 'zh' : 'en'),
     rain: 0.60,
     fog:  0.27,
+    fogBright: 0.30,
     refract: 0.55,
     dropSize: 1.21,
     dropDensity: 0.14,
@@ -43,6 +44,7 @@
   const panel        = $('panel');
   const sRain        = $('sRain');
   const sFog         = $('sFog');
+  const sFogBright   = $('sFogBright');
   const sRefract     = $('sRefract');
   const sDropSize    = $('sDropSize');
   const sDropDensity = $('sDropDensity');
@@ -50,6 +52,7 @@
   const sVol         = $('sVol');
   const vRain        = $('vRain');
   const vFog         = $('vFog');
+  const vFogBright   = $('vFogBright');
   const vRefract     = $('vRefract');
   const vDropSize    = $('vDropSize');
   const vDropDensity = $('vDropDensity');
@@ -67,6 +70,7 @@
 
   shader.setRain(state.rain);
   shader.setFog(state.fog);
+  shader.setFogBright(state.fogBright);
   shader.setRefract(state.refract);
   shader.setDropSize(state.dropSize);
   shader.setDropDensity(state.dropDensity);
@@ -74,6 +78,7 @@
 
   sRain.value = Math.round(state.rain * 100);
   sFog.value  = Math.round(state.fog  * 100);
+  sFogBright.value = Math.round(state.fogBright * 100);
   sRefract.value = Math.round(state.refract * 100);
   sDropSize.value = Math.round(state.dropSize * 100);
   sDropDensity.value = Math.round(state.dropDensity * 100);
@@ -81,6 +86,7 @@
   sVol.value  = Math.round(state.vol  * 100);
   vRain.textContent    = sRain.value;
   vFog.textContent     = sFog.value;
+  vFogBright.textContent = sFogBright.value;
   vRefract.textContent = sRefract.value;
   vDropSize.textContent = sDropSize.value;
   vDropDensity.textContent = sDropDensity.value;
@@ -321,6 +327,7 @@
   }
   bindSlider(sRain,    vRain,    v => shader.setRain(v),    'rain');
   bindSlider(sFog,     vFog,     v => shader.setFog(v),     'fog');
+  bindSlider(sFogBright, vFogBright, v => shader.setFogBright(v), 'fogBright');
   bindSlider(sSpeed,   vSpeed,   v => shader.setSpeed(v),   'speed');
   bindSlider(sDropSize, vDropSize, v => shader.setDropSize(v), 'dropSize');
   bindSlider(sDropDensity, vDropDensity, v => shader.setDropDensity(v), 'dropDensity');

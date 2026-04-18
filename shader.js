@@ -34,6 +34,7 @@
     uniform sampler2D iChannel1;
     uniform float uTextDissolve;
     uniform float uHasText;
+    uniform float uFogBright;
 
     #define S(a, b, t) smoothstep(a, b, t)
 
@@ -243,24 +244,28 @@
       // --- finger-on-glass text effect ---
       vec2 textUV = vec2(UV.x, 1.0 - UV.y);
       float textMask = texture(iChannel1, textUV).r;
-      textMask *= 1.0 - smoothstep(0.0, 0.85, uTextDissolve);
-      // Text clears the fog — finger wipe reveals sharp background
-      float textFocus = mix(max(focus, 3.5), 0.0, smoothstep(0.02, 0.25, textMask));
+      // reclaim: fog gradually refills the cleared letter areas (0=writing, 1=fully fogged over)
+      float reclaim = smoothstep(0.0, 1.0, uTextDissolve);
+
+      // As condensation refills, sharp focus in letter areas fades back to blurry
+      float textFocus = mix(max(focus, 3.5), 0.0, smoothstep(0.02, 0.25, textMask) * (1.0 - reclaim));
       focus = mix(focus, textFocus, step(0.01, textMask));
 
       vec3 col = sampleBg(UV + n * uRefract, focus);
 
-      // --- condensation fog: only when writing, strong center, fades to edges ---
+      // --- condensation fog: fills back into letter areas during dissolve ---
       float textClear  = smoothstep(0.02, 0.3, textMask);
       float radial     = 1.0 - smoothstep(0.0, 0.75, length(UV - 0.5) * 1.6);
-      float hasTextFade = uHasText * (1.0 - smoothstep(0.8, 1.0, uTextDissolve));
-      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear);
-      vec3 fogTint = vec3(0.62, 0.64, 0.68);
+      // Overall fog effect fades only after letters are fully reclaimed
+      float hasTextFade = uHasText * (1.0 - smoothstep(0.85, 1.0, uTextDissolve));
+      // Fog invades cleared areas progressively: (1 - textClear*(1-reclaim))
+      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear * (1.0 - reclaim));
+      vec3 fogTint = mix(vec3(0.50, 0.52, 0.58), vec3(0.90, 0.92, 0.95), uFogBright);
       col = mix(col, fogTint, condensation);
 
-      // --- water bead at wipe edge (subtle darkening) ---
+      // --- water bead at wipe edge (fades as fog reclaims) ---
       float edge = smoothstep(0.05, 0.20, textMask) * (1.0 - smoothstep(0.20, 0.45, textMask));
-      col *= 1.0 - edge * 0.15;
+      col *= 1.0 - edge * 0.15 * (1.0 - reclaim);
 
       // vignette
       col *= 1.0 - dot(UV - 0.5, UV - 0.5);
@@ -298,6 +303,7 @@
       this.hasMipmap = 0.0;
       this.textDissolve = 0.0;
       this.hasText = 0.0;
+      this.fogBright = 0.3;
       this.videoEl = null;
 
       this._initGL();
@@ -355,6 +361,7 @@
         iChannel1:   gl.getUniformLocation(prog, 'iChannel1'),
         uTextDissolve: gl.getUniformLocation(prog, 'uTextDissolve'),
         uHasText:    gl.getUniformLocation(prog, 'uHasText'),
+        uFogBright:  gl.getUniformLocation(prog, 'uFogBright'),
       };
 
       this.tex = gl.createTexture();
@@ -397,6 +404,7 @@
     setSpeed(v) { this.speed = v; }
     setTextDissolve(v) { this.textDissolve = v; }
     setHasText(v)      { this.hasText = v; }
+    setFogBright(v)    { this.fogBright = v; }
 
     updateTextMask(canvas) {
       const gl = this.gl;
@@ -491,6 +499,7 @@
       gl.uniform1f(this.u.uHasMipmap, this.hasMipmap);
       gl.uniform1f(this.u.uTextDissolve, this.textDissolve);
       gl.uniform1f(this.u.uHasText, this.hasText);
+      gl.uniform1f(this.u.uFogBright, this.fogBright);
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
