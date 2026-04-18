@@ -244,30 +244,35 @@
       // --- finger-on-glass text effect ---
       vec2 textUV = vec2(UV.x, 1.0 - UV.y);
       float textMask = texture(iChannel1, textUV).r;
-      // reclaim: fog gradually refills the cleared letter areas (0=writing, 1=fully fogged over)
-      float reclaim = smoothstep(0.0, 1.0, uTextDissolve);
 
-      // As condensation refills, sharp focus in letter areas fades back to blurry
-      float textFocus = mix(max(focus, 3.5), 0.0, smoothstep(0.02, 0.25, textMask) * (1.0 - reclaim));
+      // Per-pixel reclaim: a rising fog "front" overtakes pixels in order of their
+      // wipe strength. Thin strokes (low mask) cross the front early; thick cores
+      // cross it last. Noise breaks the mathematical uniformity so fog arrives
+      // in organic patches, like real condensation.
+      float dissolveFront = mix(-0.15, 1.35, uTextDissolve);
+      float fogNoise = (vnoise(textUV * 3.5) - 0.5) * 0.18;
+      float stillWiped = 1.0 - smoothstep(0.0, 0.2, dissolveFront - textMask + fogNoise);
+
+      // Sharp focus persists only where the finger-wipe hasn't yet been reclaimed
+      float textFocus = mix(max(focus, 3.5), 0.0, smoothstep(0.02, 0.25, textMask) * stillWiped);
       focus = mix(focus, textFocus, step(0.01, textMask));
 
       vec3 col = sampleBg(UV + n * uRefract, focus);
 
-      // --- condensation fog: fills back into letter areas during dissolve ---
-      float textClear  = smoothstep(0.02, 0.3, textMask);
+      // --- condensation fog: reclaims pixels as they cross the fog front ---
+      float textClear  = smoothstep(0.02, 0.3, textMask) * stillWiped;
       float radial     = 1.0 - smoothstep(0.0, 0.75, length(UV - 0.5) * 1.6);
-      // Overall fog effect fades only after letters are fully reclaimed
-      float hasTextFade = uHasText * (1.0 - smoothstep(0.85, 1.0, uTextDissolve));
-      // Rain drops bead on the glass and physically displace condensation — keeps drops visible through fog
+      // Overall fog only fades after nearly everything is reclaimed
+      float hasTextFade = uHasText * (1.0 - smoothstep(0.92, 1.0, uTextDissolve));
+      // Rain drops physically displace condensation — drops stay visible through fog
       float fogUnderDrop = 1.0 - c.x * 0.62;
-      // Fog invades cleared areas progressively: (1 - textClear*(1-reclaim))
-      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear * (1.0 - reclaim)) * fogUnderDrop;
+      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear) * fogUnderDrop;
       vec3 fogTint = mix(vec3(0.50, 0.52, 0.58), vec3(0.90, 0.92, 0.95), uFogBright);
       col = mix(col, fogTint, condensation);
 
-      // --- water bead at wipe edge (fades as fog reclaims) ---
+      // --- water bead at wipe edge (fades per-pixel as fog reclaims) ---
       float edge = smoothstep(0.05, 0.20, textMask) * (1.0 - smoothstep(0.20, 0.45, textMask));
-      col *= 1.0 - edge * 0.15 * (1.0 - reclaim);
+      col *= 1.0 - edge * 0.15 * stillWiped;
 
       // vignette
       col *= 1.0 - dot(UV - 0.5, UV - 0.5);

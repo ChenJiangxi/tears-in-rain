@@ -24,6 +24,11 @@ window.QUOTES = [
 
   /* ── In the Mood for Love 花样年华 ── */
   {
+    en: "If I had an extra ticket, would you go with me?",
+    zh: "如果多一张船票，你会不会跟我一起走？",
+    src: "In the Mood for Love · Wong Kar-wai",
+  },
+  {
     en: "He remembers those vanished years. As though looking through a dusty window pane, the past is something he could see, but not touch. And everything he sees is blurred and indistinct.",
     zh: "那些消逝了的岁月，仿佛隔着一块积着灰尘的玻璃，看得到，抓不着。他一直在怀念着过去的一切。",
     block: true,
@@ -63,16 +68,6 @@ window.QUOTES = [
   {
     en: "One minute to three, April 16th, 1960. You were with me. Because of you, I'll remember this one minute. From now on, we'll always have been one-minute friends.",
     zh: "一九六零年四月十六日，下午三点差一分，你和我在一起。因为你，我会记住这一分钟。以后我们随时都是一分钟的朋友。",
-    src: "Days of Being Wild · Wong Kar-wai",
-  },
-  {
-    en: "I used to think one minute could pass so quickly. But actually, it can last forever.",
-    zh: "以前我以为一分钟很快就会过去，其实是可以很长很长的。",
-    src: "Days of Being Wild · Wong Kar-wai",
-  },
-  {
-    en: "If I had an extra ticket, would you go with me?",
-    zh: "如果我多一张船票，你会不会跟我一起走？",
     src: "Days of Being Wild · Wong Kar-wai",
   },
   {
@@ -161,5 +156,24 @@ window.QUOTES = [
     en: "When she saw him, she made herself very small — all the way down to the dust. But her heart was glad, and from the dust a flower bloomed.",
     zh: "见了他，她变得很低很低，低到尘埃里，但她的心里是欢喜的，从尘埃里开出花来。",
     src: "张爱玲 · Eileen Chang",
+  },
+
+  /* ── The Grandmaster 一代宗师 ── */
+  {
+    en: "All encounters in this world are reunions after a long time apart.",
+    zh: "世间所有的相遇，都是久别重逢。",
+    src: "The Grandmaster · Wong Kar-wai",
+  },
+  {
+    en: "If there is an echo in your heart, it will surely be answered.",
+    zh: "念念不忘，必有回响。",
+    src: "The Grandmaster · Wong Kar-wai",
+  },
+
+  /* ── Farewell My Concubine 霸王别姬 ── */
+  {
+    en: "A lifetime is a lifetime. Not a year, not a month, not a day, not a second less!",
+    zh: "说好的是一辈子，差一年、一个月、一天、一个时辰，都不算一辈子！",
+    src: "Farewell My Concubine · Chen Kaige",
   },
 ];
