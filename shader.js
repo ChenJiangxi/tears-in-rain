@@ -245,34 +245,51 @@
       vec2 textUV = vec2(UV.x, 1.0 - UV.y);
       float textMask = texture(iChannel1, textUV).r;
 
-      // Per-pixel reclaim: a rising fog "front" overtakes pixels in order of their
-      // wipe strength. Thin strokes (low mask) cross the front early; thick cores
-      // cross it last. Noise breaks the mathematical uniformity so fog arrives
-      // in organic patches, like real condensation.
+      // Per-pixel reclaim front: thin strokes refog before thick cores; noise
+      // breaks the mathematical contour so fog arrives in organic patches.
       float dissolveFront = mix(-0.15, 1.35, uTextDissolve);
-      float fogNoise = (vnoise(textUV * 3.5) - 0.5) * 0.18;
-      float stillWiped = 1.0 - smoothstep(0.0, 0.2, dissolveFront - textMask + fogNoise);
+      float fogPatch = (vnoise(textUV * 3.5) - 0.5) * 0.18;
+      float stillWiped = 1.0 - smoothstep(0.0, 0.2, dissolveFront - textMask + fogPatch);
+      float wipeActive = smoothstep(0.02, 0.25, textMask) * stillWiped;
 
-      // Sharp focus persists only where the finger-wipe hasn't yet been reclaimed
-      float textFocus = mix(max(focus, 3.5), 0.0, smoothstep(0.02, 0.25, textMask) * stillWiped);
+      // --- water beads on the cleared glass inside letters ---
+      // Fresh condensation beads up on the wiped surface; the drops are visible
+      // through the letter, refract the background like little lenses, and
+      // catch light as small specular highlights.
+      float letterBeads = StaticDrops(uv * 1.5, 0.4);
+      float lbdx        = StaticDrops((uv + e) * 1.5, 0.4);
+      float lbdy        = StaticDrops((uv + e.yx) * 1.5, 0.4);
+      vec2  beadN       = vec2(lbdx - letterBeads, lbdy - letterBeads);
+      float beads       = letterBeads * wipeActive;
+
+      // Sharp focus inside the wipe — drops and clear glass both show crisply
+      float textFocus = mix(max(focus, 3.5), 0.0, wipeActive);
       focus = mix(focus, textFocus, step(0.01, textMask));
 
-      vec3 col = sampleBg(UV + n * uRefract, focus);
+      // Background sample: rain refraction + letter-bead refraction combined
+      vec3 col = sampleBg(UV + (n + beadN * wipeActive * 1.5) * uRefract, focus);
+
+      // Water-bead specular highlight — they catch the diffused ambient light
+      col += vec3(0.32, 0.36, 0.42) * smoothstep(0.45, 0.95, beads) * 0.5;
 
       // --- condensation fog: reclaims pixels as they cross the fog front ---
       float textClear  = smoothstep(0.02, 0.3, textMask) * stillWiped;
       float radial     = 1.0 - smoothstep(0.0, 0.75, length(UV - 0.5) * 1.6);
-      // Overall fog only fades after nearly everything is reclaimed
       float hasTextFade = uHasText * (1.0 - smoothstep(0.92, 1.0, uTextDissolve));
-      // Rain drops physically displace condensation — drops stay visible through fog
       float fogUnderDrop = 1.0 - c.x * 0.62;
-      float condensation = uFog * 2.2 * hasTextFade * radial * (1.0 - textClear) * fogUnderDrop;
-      vec3 fogTint = mix(vec3(0.50, 0.52, 0.58), vec3(0.90, 0.92, 0.95), uFogBright);
+      // Real condensation isn't flat — brighter/darker wisps drift across the pane
+      float fogTexture = 0.78 + vnoise(UV * vec2(iResolution.x/iResolution.y, 1.0) * 5.0 + iTime * 0.03) * 0.38;
+      float condensation = clamp(
+        uFog * 2.2 * hasTextFade * radial * (1.0 - textClear) * fogUnderDrop * fogTexture,
+        0.0, 1.0);
+      // Cool blue-white undertone — cold glass fog, turns near-white at high brightness
+      vec3 fogTint = mix(vec3(0.48, 0.52, 0.60), vec3(0.92, 0.94, 0.98), uFogBright);
       col = mix(col, fogTint, condensation);
 
-      // --- water bead at wipe edge (fades per-pixel as fog reclaims) ---
-      float edge = smoothstep(0.05, 0.20, textMask) * (1.0 - smoothstep(0.20, 0.45, textMask));
-      col *= 1.0 - edge * 0.15 * stillWiped;
+      // --- water bead at wipe edge: highlight + shadow (glossy wet rim) ---
+      float edge = smoothstep(0.05, 0.18, textMask) * (1.0 - smoothstep(0.18, 0.36, textMask));
+      col += vec3(0.12, 0.14, 0.18) * edge * stillWiped * 0.55;
+      col *= 1.0 - edge * 0.10 * stillWiped;
 
       // vignette
       col *= 1.0 - dot(UV - 0.5, UV - 0.5);
