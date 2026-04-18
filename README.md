@@ -6,11 +6,17 @@
 一扇永远在下雨的起雾窗户。
 一台没有记忆的打字机。
 
+直接试玩在[tears in rain](https://chenjiangxi.github.io/tears-in-rain/)
+
+
+https://github.com/user-attachments/assets/ead299c7-70d4-4cdd-b166-a24ce20c2101
+
+
 ---
 
 ## 创作理念
 
-王家卫《花样年华》里的树洞。
+王家卫《花样年华》里吴哥窟的树洞。
 
 有些话，说出来太重，憋着又太闷。
 **Tears in Rain** 给它们一个出口：写在玻璃上，然后被雨带走。
