@@ -14,7 +14,7 @@ import { RainAudio } from './audio.js';
 import { I18N }      from './i18n.js';
 import { QUOTES }    from './quotes.js';
 
-const DEFAULT_BG_URL    = '/picture/R-C.jpeg';
+const DEFAULT_BG_URL    = 'picture/R-C.jpeg';
 const IDLE_TO_DISSOLVE  = 15000;  // ms of key silence → start dissolve
                                   // (long, so thinking pauses don't trigger;
                                   //  Esc is the main way to dissolve)
