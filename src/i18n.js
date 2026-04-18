@@ -13,7 +13,7 @@ export const I18N = {
     loc:       'rain recorded · somewhere in the night',
     reel:      'reel',
     take:      'take',
-    escHint:   'esc — let it dissolve',
+    escHint:   'enter — new line · esc — let it dissolve',
     typingHint:'write on the glass',
 
     panelTitle:'Controls',
@@ -53,7 +53,7 @@ export const I18N = {
     loc:       '雨声录于某个深夜',
     reel:      '卷',
     take:      '镜',
-    escHint:   'esc — 让它散去',
+    escHint:   'enter — 换行 · esc — 让它散去',
     typingHint:'在玻璃上写下',
 
     panelTitle:'调控',

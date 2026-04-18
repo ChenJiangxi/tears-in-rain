@@ -8,12 +8,12 @@ precision highp float;
      1. Background (image / video / procedural)
      2. Rain drops on the outside of the glass — refraction + focus
         (Heartfelt by BigWings / Martijn Steinrucken, ltffzl, CC BY-NC-SA 3.0)
-     3. Condensation fog on the inside, sampled per-pixel from uFogState
-     4. Wetness field from uWetness — drives bead lensing, highlights,
-        shadows and "sharp trail through fog" effect.
-
-   Persistent state (uFogState, uWetness) is updated by separate passes
-   before this one runs.
+     3. Condensation fog, proportional to ambientFog × (1 − wipe).
+        The wipe signal is the text mask multiplied by maskAlpha; there is
+        no persistent state field. During typing, maskAlpha = 1 and the
+        stroke carves the fog instantly. When the user stops (Esc / idle),
+        maskAlpha eases to 0 over a few seconds — fog rolls smoothly back
+        over the text. This is the only source of "slow disappearance".
    ========================================================= */
 
 out vec4 outColor;
@@ -30,8 +30,9 @@ uniform float uDropDensity;
 uniform float uSpeed;
 uniform int   uBgMode;           // 0 procedural, 1 image, 2 video
 uniform float uHasMipmap;
-uniform sampler2D uFogState;     // R: per-pixel condensation 0..1
-uniform sampler2D uWetness;      // R: per-pixel wetness / bead trail 0..1
+uniform sampler2D uTextMask;     // white where the user has drawn
+uniform float uMaskAlpha;        // 1 during typing; eases 1→0 during dissolve
+uniform float uAmbientFog;       // 0→1 intro ramp; 1 afterwards
 uniform float uFogBright;        // user-facing fog whiteness
 
 #define S(a, b, t) smoothstep(a, b, t)
@@ -136,21 +137,19 @@ vec2 Drops(vec2 uv, float t, float l0, float l1, float l2) {
   return vec2(c, max(m1.y * l0, m2.y * l1));
 }
 
-/* ---------- Small "bead" field: high-frequency dot lattice ----------
-   Used only inside wet regions to give the trail a droplet texture
-   rather than a smooth glow. Each cell is a single circular bead. */
-float beadLattice(vec2 uv, out vec2 beadNormal) {
-  uv *= 55.;
+/* ---------- Tiny condensation speckle at the stroke edge ----------
+   No glass beads. Just a sparse micro-droplet mist that only lives in a
+   thin ring where the wipe transitions, so strokes read as "fingertip
+   through fog" rather than "water painted onto glass". */
+float edgeSpeckle(vec2 uv) {
+  uv *= 140.;
   vec2 id = floor(uv);
   vec2 f = fract(uv) - 0.5;
   vec3 n = N13(id.x * 74.31 + id.y * 1379.12);
-  vec2 p = (n.xy - 0.5) * 0.55;
-  vec2 diff = f - p;
-  float d = length(diff);
-  float radius = 0.14 + n.z * 0.22;
-  float bead = S(radius, radius * 0.2, d);
-  beadNormal = (d > 1e-4) ? -(diff / d) * bead : vec2(0.0);
-  return bead;
+  vec2 p = (n.xy - 0.5) * 0.6;
+  float d = length(f - p);
+  float radius = 0.04 + n.z * 0.07;
+  return step(0.72, n.z) * S(radius, radius * 0.15, d);
 }
 
 /* ---------- Procedural background ---------- */
@@ -228,53 +227,48 @@ void main() {
   float cy = Drops(uv + eps.yx, t, staticDropsAmt, layer1, layer2).x;
   vec2 rainN = vec2(cx - c.x, cy - c.x);
 
-  // ---- sample persistent state ----
-  float fogLevel = texture(uFogState, UV).r;
-  float wetLevel = texture(uWetness,  UV).r;
+  // ---- wipe signal: text mask (gated by maskAlpha for dissolve) ----
+  float mask = texture(uTextMask, UV).r;
+  float wipe = mask * uMaskAlpha;
 
-  // wetness gradient — gentle large-scale lensing along the trail
-  vec2  wtx = 1.0 / vec2(textureSize(uWetness, 0));
-  float wrL = texture(uWetness, UV + vec2(wtx.x * 2.0, 0.0)).r;
-  float wrR = texture(uWetness, UV - vec2(wtx.x * 2.0, 0.0)).r;
-  float wrU = texture(uWetness, UV + vec2(0.0, wtx.y * 2.0)).r;
-  float wrD = texture(uWetness, UV - vec2(0.0, wtx.y * 2.0)).r;
-  vec2  wetN = vec2(wrL - wrR, wrU - wrD) * 4.0;
+  // fog level: smoothly reduced where wipe is strong. K controls how fully a
+  // stroke clears the fog (K=9 → stroke interior fog ≈ 10%).
+  const float K = 9.0;
+  float fogLevel = uAmbientFog / (1.0 + K * wipe);
 
-  // ---- bead lattice inside wet region ----
-  vec2 beadN;
-  float beadField = beadLattice(uv, beadN);
-  float beadGate  = S(0.18, 0.65, wetLevel);   // only where wet enough
-  float beads     = beadField * beadGate;
+  // Stroke edge band (for faint condensation speckle) computed directly from
+  // the mask gradient. No persistent wetness field needed.
+  vec2  mtx = 1.0 / iResolution;
+  float mL = texture(uTextMask, UV - vec2(mtx.x * 2.0, 0.0)).r;
+  float mR = texture(uTextMask, UV + vec2(mtx.x * 2.0, 0.0)).r;
+  float mU = texture(uTextMask, UV + vec2(0.0, mtx.y * 2.0)).r;
+  float mD = texture(uTextMask, UV - vec2(0.0, mtx.y * 2.0)).r;
+  float edgeMag = length(vec2(mR - mL, mU - mD)) * uMaskAlpha;
+  float edgeBand = S(0.05, 0.35, edgeMag);
 
-  // ---- focus: fog blurs, rain trails and beads sharpen through it ----
+  // ---- focus: fog blurs, stroke interiors clear through it ----
   float maxBlur = mix(3., 6., rainAmount) * clamp(uFog * 2.0, 0.0, 2.0);
   float fogBlur = maxBlur * fogLevel;
-  float focus   = mix(fogBlur - c.y, 0.5, S(.1, .2, c.x));
-  // wet trails clear the glass: drop focus as wetness rises
-  focus         = mix(focus, 0.0, S(0.1, 0.55, wetLevel));
+  float focus   = mix(fogBlur - c.y, 0.0, S(.1, .2, c.x));
+  // stroke interior: drop focus further so background is crisp
+  focus         = mix(focus, 0.0, S(0.2, 0.7, wipe));
 
-  // ---- background refraction sample ----
-  vec2 offs = (rainN + (wetN + beadN * beadGate * 0.8) * 0.35) * uRefract;
+  // ---- background refraction: rain only. ----
+  vec2 offs = rainN * uRefract;
   vec3 col  = sampleBg(UV + offs, focus);
-
-  // ---- bead specular highlight: ambient sky on the curved water ----
-  col += vec3(0.32, 0.36, 0.44) * S(0.35, 0.95, beads) * 0.55;
 
   // ---- condensation fog tint ----
   float radial = 1.0 - smoothstep(0.0, 0.82, length(UV - 0.5) * 1.55);
-  // breathing wisps — slow drift, kept subtle
   float fogTex = 0.86 + vnoise(UV * vec2(iResolution.x/iResolution.y, 1.0) * 4.5 + iTime * 0.025) * 0.28;
-  // rain drops locally displace condensation — drops stay readable through fog
   float fogUnderDrop = 1.0 - c.x * 0.55;
 
   float cond = clamp(uFog * 1.6 * fogLevel * radial * fogTex * fogUnderDrop, 0.0, 1.0);
   vec3 fogTint = mix(vec3(0.48, 0.52, 0.60), vec3(0.92, 0.94, 0.98), uFogBright);
   col = mix(col, fogTint, cond);
 
-  // ---- bead shadow: darker ring at the bead edge + wetness perimeter ----
-  float wetRim = S(0.02, 0.18, wetLevel) * (1.0 - S(0.35, 0.75, wetLevel));
-  col *= 1.0 - wetRim * 0.13;
-  col *= 1.0 - S(0.15, 0.35, beads) * 0.08;
+  // ---- faint condensation speckle only along the stroke edge ----
+  float speck = edgeSpeckle(uv) * edgeBand;
+  col = mix(col, fogTint, speck * 0.30);
 
   // vignette
   col *= 1.0 - dot(UV - 0.5, UV - 0.5) * 0.9;

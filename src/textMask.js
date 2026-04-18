@@ -17,11 +17,17 @@ export class TextMask {
     this.octx = this.off.getContext('2d');
 
     this.active = false;
-    this.lines  = [[]];
+    const firstLine = [];
+    firstLine.easedX = null;
+    this.lines = [firstLine];
+    this.easedBlockY = null;
 
-    this.fontSize     = 76;
-    this.lineHeight   = 132;
-    this.font         = `300 ${this.fontSize}px 'Caveat', 'Ma Shan Zheng', cursive`;
+    this.fontSize     = 62;
+    this.lineHeight   = 106;
+    // Shadows Into Light Two reads like a marker drawn through fog — the
+    // closest glyph shape to a fingertip on a foggy pane. Ma Shan Zheng
+    // is the Chinese handwriting fallback (brush style).
+    this.font         = `400 ${this.fontSize}px 'Shadows Into Light Two', 'Homemade Apple', 'Ma Shan Zheng', 'Caveat', cursive`;
     this.maxLineWidth = 780;
 
     this.cursorBlink = 0;
@@ -41,7 +47,9 @@ export class TextMask {
     this.octx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.w = w; this.h = h;
     this.pw = pw; this.ph = ph;
-    this.maxLineWidth = Math.min(w * 0.92, w - 40);
+    // Leave room to the right of the left-anchor for the caret and breathing space.
+    const anchorX = Math.max(40, w * 0.14);
+    this.maxLineWidth = Math.max(300, w - anchorX - 40);
   }
 
   /* ---------- text state ---------- */
@@ -49,7 +57,10 @@ export class TextMask {
   stopTyping()  { this.active = false; }
 
   reset() {
-    this.lines = [[]];
+    const line = [];
+    line.easedX = null;
+    this.lines = [line];
+    this.easedBlockY = null;
     this.octx.clearRect(0, 0, this.off.width, this.off.height);
   }
 
@@ -64,8 +75,12 @@ export class TextMask {
   _lineWidth(line) { return this._measure(this._lineText(line)); }
 
   _newLine() {
-    if (this.lines.length >= 6) this.lines.shift();
-    this.lines.push([]);
+    if (this.lines.length >= 5) this.lines.shift();
+    // Each line carries its own eased start-X so existing glyphs slide
+    // smoothly toward a new centered position when characters are added.
+    const line = [];
+    line.easedX = null;
+    this.lines.push(line);
   }
 
   addCharacter(ch) {
@@ -95,6 +110,26 @@ export class TextMask {
     const dt = Math.min(0.06, (now - this.prevTime) / 1000);
     this.prevTime = now;
     this.cursorBlink += dt;
+
+    // Critically-damped-ish ease: reaches ~63% of remaining gap every 1/rate
+    // seconds. rate=22 → noticeable settle over ~120ms. Fast enough to feel
+    // responsive, slow enough that characters visibly "breathe" into place.
+    const rate = 22;
+    const lambda = 1 - Math.exp(-rate * dt);
+
+    // Vertical block position, centered around the user's block of lines.
+    const nLines = this.lines.length;
+    const blockHeight = nLines * this.lineHeight;
+    const targetY = (this.h - blockHeight) / 2 + this.fontSize * 0.78;
+    if (this.easedBlockY === null) this.easedBlockY = targetY;
+    else this.easedBlockY += (targetY - this.easedBlockY) * lambda;
+
+    // Per-line left edge so characters slide into their centered position.
+    for (const line of this.lines) {
+      const targetX = (this.w - this._lineWidth(line)) / 2;
+      if (line.easedX === null) line.easedX = targetX;
+      else line.easedX += (targetX - line.easedX) * lambda;
+    }
   }
 
   render() {
@@ -113,31 +148,33 @@ export class TextMask {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#ffffff';
 
-    const nLines = this.lines.length;
-    const blockHeight = nLines * this.lineHeight;
-    const startY = (this.h - blockHeight) / 2 + this.fontSize * 0.78;
+    // Use eased positions so new characters slide into place instead of
+    // snapping. easedBlockY / easedX are updated each frame in update().
+    const fallbackY = (this.h - this.lines.length * this.lineHeight) / 2 + this.fontSize * 0.78;
+    const startY = this.easedBlockY !== null ? this.easedBlockY : fallbackY;
 
     let caretPos = null;
 
     for (let li = 0; li < this.lines.length; li++) {
       const line = this.lines[li];
-      const lineWidth = this._lineWidth(line);
       const lineY = startY + li * this.lineHeight;
-      let x = (this.w - lineWidth) / 2;
+      const fallbackX = (this.w - this._lineWidth(line)) / 2;
+      let x = line.easedX !== null && line.easedX !== undefined ? line.easedX : fallbackX;
 
       for (const g of line) {
         const glyphW = this._measure(g.ch);
         const s = g.seed;
-        const rot   = (s - 0.5) * 0.08;
-        const offY  = (s * 2 - 1) * 2.5;
-        const scale = 0.95 + s * 0.10;
+        const rot   = (s - 0.5) * 0.14;
+        const offY  = (s * 2 - 1) * 4.5;
+        const offX  = ((s * 7) % 1 - 0.5) * 2.2;
+        const scale = 0.88 + s * 0.20;
 
         ctx.save();
-        ctx.translate(x + glyphW / 2, lineY + offY);
+        ctx.translate(x + glyphW / 2 + offX, lineY + offY);
         ctx.rotate(rot);
         ctx.scale(scale, scale);
-        ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
-        ctx.shadowBlur  = 2;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.35)';
+        ctx.shadowBlur  = 1;
         ctx.fillText(g.ch, -glyphW / 2, 0);
         ctx.restore();
         x += glyphW;

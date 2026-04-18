@@ -15,10 +15,11 @@ import { I18N }      from './i18n.js';
 import { QUOTES }    from './quotes.js';
 
 const DEFAULT_BG_URL    = '/picture/R-C.jpeg';
-const IDLE_TO_DISSOLVE  = 4800;   // ms of key silence → start dissolve
-const DISSOLVE_HOLD_MS  = 6500;   // from dissolve start → echo appears
-                                  // (fog refills in ~2.5s, trail dries in ~7s;
-                                  //  echo appears just as the trail fades)
+const IDLE_TO_DISSOLVE  = 15000;  // ms of key silence → start dissolve
+                                  // (long, so thinking pauses don't trigger;
+                                  //  Esc is the main way to dissolve)
+const DISSOLVE_HOLD_MS  = 5200;   // from dissolve start → echo appears
+                                  // (slow regrowth 0.28 fills ~77% by then)
 const ECHO_FADE_MS      = 1400;
 
 const $ = id => document.getElementById(id);
@@ -183,7 +184,8 @@ async function revealEcho(quote) {
 function returnToTyping() {
   textMask.reset();
   textMask.enterTyping();
-  renderer.setWipeActive(1.0);
+  // New take: fog fully established, text mask fully visible.
+  renderer.resetGlass();
   state.phase = 'typing';
   audio.setVolume(state.audioOn ? state.vol : 0);
   state.take += 1;
@@ -201,10 +203,9 @@ function skipEcho() {
 
 /* ---------- dissolve ----------
 
-   With wipeActive = 0, the renderer stops feeding wipe pressure into the
-   fog-state field. Fog naturally refills over the letters (~2.5s) and
-   the wetness trail slowly dries out (~7s). We just wait the hold time
-   and then show the echo — there's no dissolve animation in software.
+   On Esc / idle, we kick off the renderer's maskAlpha ramp: it eases
+   1 → 0 over DISSOLVE_HOLD_MS, so the fog smoothly rolls back over
+   the text. Once the ramp finishes we reveal the echo.
 */
 let dissolveTimer = null;
 function triggerDissolve() {
@@ -215,7 +216,7 @@ function triggerDissolve() {
 
   state.phase = 'dissolving';
   textMask.stopTyping();
-  renderer.setWipeActive(0.0);
+  renderer.beginDissolve(DISSOLVE_HOLD_MS);
   audio.dissolveSwell();
 
   dissolveTimer = setTimeout(() => {
@@ -317,9 +318,12 @@ async function begin() {
     await audio.start();
     audio.setVolume(state.vol);
   }
+  // Fog starts building the moment the intro clears — the user sees the
+  // image fade behind a veil of condensation while the typing hint
+  // appears. Fog reaches full density in ~2.5s.
+  renderer.beginFog();
   await sleep(700);
   textMask.enterTyping();
-  renderer.setWipeActive(1.0);
   state.phase = 'typing';
   focusIME();
   showTypingHint();
@@ -492,8 +496,16 @@ function loop() {
 
 /* ---------- boot ---------- */
 (async function bootstrap() {
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (_) {}
+  if (document.fonts) {
+    // Explicitly load the handwriting faces so the first rasterized frame
+    // uses them, not a generic "cursive" fallback.
+    try {
+      await Promise.all([
+        document.fonts.load(`400 62px "Shadows Into Light Two"`),
+        document.fonts.load(`400 62px "Ma Shan Zheng"`),
+      ]);
+      await document.fonts.ready;
+    } catch (_) {}
   }
   textMask.resize();
   updateClock();
